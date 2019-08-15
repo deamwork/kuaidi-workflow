@@ -7,8 +7,7 @@
 @license: BSD-3-clause
 '''
 
-import os
-import sys, json, random, time
+import os, re, sys, json, random, time
 from workflow import Workflow, ICON_INFO, ICON_ERROR, ICON_WARNING, web
 
 COMPANY_CODE = {
@@ -199,23 +198,54 @@ COMPANY_CODE = {
 }
 
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36',
-    'Referer': 'http://www.kuaidi100.com'
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36',
+    'Referer': 'http://www.kuaidi100.com',
+    'Sec-Fetch-Mode': 'cros',
+    'Sec-Fetch-Site': 'same-origin',
+    'X-Requested-With': 'XMLHttpRequest',
+    'Accept': 'application/json, text/javascript, */*; q=0.01',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+    'DNT': '1'
 }
+
+def get_csrf_token():
+    HOMEPAGE = 'http://www.kuaidi100.com/'
+
+    try:
+        rt = web.get(HOMEPAGE, headers=HEADERS)
+        rt.raise_for_status()
+        # wf.logger.debug(rt.headers.get('set-cookie'))
+        cookies = {}
+        regex = r"csrftoken=([A-Za-z0-9\-]+);|WWWID=([A-Z0-9]+);"
+        matches = re.finditer(regex, rt.headers.get('set-cookie'))
+        for matchNum, match in enumerate(matches, start=1):
+            key, value = match.group().split('=')[:2]
+            cookies[key] = value[:-1]
+
+    except Exception as e:
+        wf.logger.debug('[D]: exception: unable to get csrf token {}'.format(e))
+        return {}
+
+    return cookies
+
 
 def get_package_company(package_no):
 
     COPMPANY_QUERY_URL = 'http://www.kuaidi100.com/autonumber/autoComNum'
 
     try:
-        rt = web.get(COPMPANY_QUERY_URL, params=dict(resultv2=1, text=package_no), headers=HEADERS)
+        rt = web.get(
+            COPMPANY_QUERY_URL,
+            params=dict(resultv2=1, text=package_no),
+            headers=HEADERS,
+            cookies={'WWWID': global_cookies['WWWID']}
+        )
         rt.raise_for_status()
 
         # 去掉前缀和多余空格，最长的即是最优解
         result = rt.json()
-        wf.logger.debug('[D]: company1: ' + ''.join(json.dumps(result)))
         result = result['auto']
-        wf.logger.debug('[D]: company2: ' + ''.join(json.dumps(result)))
 
         return [result[0]['comCode'], COMPANY_CODE[result[0]['comCode']]]
     except Exception as e:
@@ -229,7 +259,7 @@ def query_package_info(package_no):
     ret = {}
 
     com_code = get_package_company(package_no)
-    wf.logger.debug('[D]:Final company: ' + ''.join(com_code))
+    # wf.logger.debug('[D]:Final company: ' + ''.join(com_code))
 
     if com_code[0] is u'Unknow':
         ret['status'] = False
@@ -246,10 +276,10 @@ def query_package_info(package_no):
     }
 
     try:
-        rt = web.get(API, params=param, headers=HEADERS)
+        rt = web.get(API, params=param, headers=HEADERS, cookies=global_cookies)
         rt.raise_for_status()
         response = rt.json()
-        wf.logger.debug('[D]: query response: ' + ''.join(json.dumps(response)))
+        # wf.logger.debug('[D]: query response: ' + ''.join(json.dumps(response)))
 
         if response:
             ret['data'] = response["data"]
@@ -288,15 +318,15 @@ def main(wf):
     param = (wf.args[0] if len(wf.args) else '').strip()
     if param:
         resu = query_package_info(param)
-        wf.logger.debug('[D]:Final Output: {}'.format(json.dumps(resu)))
+        # wf.logger.debug('[D]:Final Output: {}'.format(json.dumps(resu)))
 
         if resu['state'] == '3' or resu['condition'] == 'F00':
             # 查无结果
             wf.add_item(title=resu["company"] + " " + resu["package_no"],
-                    subtitle=u"查无结果（可能是接口调用过多，请稍后再试）",
-                    arg="",
-                    valid=True,
-                    icon=package_icon)
+                        subtitle=u"查无结果（可能是接口调用过多，请稍后再试）",
+                        arg="",
+                        valid=True,
+                        icon=package_icon)
         else:
             final = resu["company"] + " " + resu["package_no"] + u" 物流信息详情\n"
             for item in reversed(resu['data']):
@@ -309,16 +339,16 @@ def main(wf):
             for item in resu['data']:
                 if u'签收' in item["context"]:
                     wf.add_item(title=success + " " + item["context"] + " " + item["location"],
-                        subtitle=item["time"],
-                        arg=item["context"] + " " + item["location"] or "" ,
-                        valid=True,
-                        icon=success_icon)
+                                subtitle=item["time"],
+                                arg=item["context"] + " " + item["location"] or "" ,
+                                valid=True,
+                                icon=success_icon)
                 else:
                     wf.add_item(title=truck + " " + item["context"] + " " + item["location"],
-                        subtitle=item["time"],
-                        arg=item["context"] + " " + item["location"] or "" ,
-                        valid=True,
-                        icon=truck_icon)
+                                subtitle=item["time"],
+                                arg=item["context"] + " " + item["location"] or "" ,
+                                valid=True,
+                                icon=truck_icon)
     else:
         title = u"快递助手"
         subtitle = u"无需输入公司，直接输入单号即可"
@@ -331,15 +361,18 @@ def main(wf):
 
 
 if __name__ == u"__main__":
+
     wf = Workflow(update_settings={
         'github_slug': 'deamwork/kuaidi-workflow',
         'frequency': 7
     })
 
+    global_cookies = get_csrf_token()
+
     if wf.update_available:
-        wf.add_item(u'发现新版本',
-                u'选中本条目开始更新',
-                autocomplete='workflow:update',
-                icon=ICON_INFO)
+        wf.add_item(title=u'发现新版本',
+                    subtitle=u'选中本条目开始更新',
+                    autocomplete='workflow:update',
+                    icon=ICON_INFO)
 
     sys.exit(wf.run(main))
