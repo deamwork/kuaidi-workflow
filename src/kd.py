@@ -68,6 +68,7 @@ def do_request(package_no, cookie):
         return response
     except Exception as e:
         # wf.logger.debug('[D]: Exception! query response: {}'.format(e))
+        pass
 
 
 def query_package_info(package_no):
