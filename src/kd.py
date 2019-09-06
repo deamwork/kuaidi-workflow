@@ -8,309 +8,153 @@
 '''
 
 import os, re, sys, json, random, time
+import hashlib
 from workflow import Workflow, ICON_INFO, ICON_ERROR, ICON_WARNING, web
 
-COMPANY_CODE = {
-    'shentong': u'申通快递',
-    'ems': u'EMS',
-    'shunfeng': u'顺丰速运',
-    'yunda': u'韵达快递',
-    'yuantong': u'圆通速递',
-    'zhongtong': u'中通速递',
-    'huitongkuaidi': u'汇通快运',
-    'tiantian': u'天天快递',
-    'zhaijisong': u'宅急送',
-    'xinhongyukuaidi': u'鑫飞鸿',
-    'cces': u'CCES(国通快递)',
-    'quanyikuaidi': u'全一快递',
-    'biaojikuaidi': u'彪记快递',
-    'xingchengjibian': u'星晨急便',
-    'yafengsudi': u'亚风速递',
-    'yuanweifeng': u'源伟丰',
-    'quanritongkuaidi': u'全日通',
-    'anxindakuaixi': u'安信达',
-    'minghangkuaidi': u'民航快递',
-    'fenghuangkuaidi': u'凤凰快递',
-    'jinguangsudikuaijian': u'京广速递',
-    'peisihuoyunkuaidi': u'配思货运',
-    'ztky': u'中铁物流',
-    'ups': u'UPS',
-    'fedex': u'FedEx-国际件',
-    'tnt': u'TNT',
-    'dhl': u'DHL-中国件',
-    'aae': u'AAE-中国件',
-    'datianwuliu': u'大田物流',
-    'debangwuliu': u'德邦物流',
-    'xinbangwuliu': u'新邦物流',
-    'longbanwuliu': u'龙邦速递',
-    'yibangwuliu': u'一邦速递',
-    'suer': u'速尔快递',
-    'lianhaowuliu': u'联昊通',
-    'guangdongyouzhengwuliu': u'广东邮政',
-    'zhongyouwuliu': u'中邮物流',
-    'tiandihuayu': u'天地华宇',
-    'shenghuiwuliu': u'盛辉物流',
-    'changyuwuliu': u'长宇物流',
-    'feikangda': u'飞康达',
-    'yuanzhijiecheng': u'元智捷诚',
-    'youzhengguonei': u'包裹/平邮',
-    'youzhengguoji': u'国际包裹',
-    'wanjiawuliu': u'万家物流',
-    'yuanchengwuliu': u'远成物流',
-    'xinfengwuliu': u'信丰物流',
-    'wenjiesudi': u'文捷航空',
-    'quanchenkuaidi': u'全晨快递',
-    'jiayiwuliu': u'佳怡物流',
-    'youshuwuliu': u'优速物流',
-    'kuaijiesudi': u'快捷速递',
-    'dsukuaidi': u'D速快递',
-    'quanjitong': u'全际通',
-    'ganzhongnengda': u'能达速递',
-    'anjiekuaidi': u'青岛安捷快递',
-    'yuefengwuliu': u'越丰物流',
-    'dpex': u'DPEX',
-    'jixianda': u'急先达',
-    'baifudongfang': u'百福东方',
-    'bht': u'BHT',
-    'wuyuansudi': u'伍圆速递',
-    'lanbiaokuaidi': u'蓝镖快递',
-    'coe': u'COE',
-    'nanjing': u'南京100',
-    'hengluwuliu': u'恒路物流',
-    'jindawuliu': u'金大物流',
-    'huaxialongwuliu': u'华夏龙',
-    'yuntongkuaidi': u'运通中港',
-    'jiajiwuliu': u'佳吉快运',
-    'shengfengwuliu': u'盛丰物流',
-    'yuananda': u'源安达',
-    'jiayunmeiwuliu': u'加运美',
-    'wanxiangwuliu': u'万象物流',
-    'hongpinwuliu': u'宏品物流',
-    'gls': u'GLS',
-    'shangda': u'上大物流',
-    'zhongtiewuliu': u'中铁快运',
-    'yuanfeihangwuliu': u'原飞航',
-    'haiwaihuanqiu': u'海外环球',
-    'santaisudi': u'三态速递',
-    'jinyuekuaidi': u'晋越快递',
-    'lianbangkuaidi': u'联邦快递',
-    'feikuaida': u'飞快达',
-    'quanfengkuaidi': u'全峰快递',
-    'rufengda': u'如风达',
-    'lejiedi': u'乐捷递',
-    'zhongxinda': u'忠信达',
-    'zhimakaimen': u'芝麻开门',
-    'saiaodi': u'赛澳递',
-    'haihongwangsong': u'海红网送',
-    'gongsuda': u'共速达',
-    'jialidatong': u'嘉里大通',
-    'ocs': u'OCS',
-    'usps': u'USPS',
-    'meiguokuaidi': u'美国快递',
-    'lijisong': u'立即送',
-    'yinjiesudi': u'银捷速递',
-    'menduimen': u'门对门',
-    'disifang': u'递四方',
-    'zhengzhoujianhua': u'郑州建华',
-    'hebeijianhua': u'河北建华',
-    'weitepai': u'微特派',
-    'dhlde': u'DHL-德国件',
-    'tonghetianxia': u'通和天下',
-    'emsguoji': u'EMS-国际件',
-    'fedexus': u'FedEx-美国件',
-    'fengxingtianxia': u'风行天下',
-    'kangliwuliu': u'康力物流',
-    'kuayue': u'跨越速递',
-    'haimengsudi': u'海盟速递',
-    'shenganwuliu': u'圣安物流',
-    'yitongfeihong': u'一统飞鸿',
-    'zhongsukuaidi': u'中速快递',
-    'neweggozzo': u'新蛋奥硕',
-    'ontrac': u'OnTrac',
-    'sevendays': u'七天连锁',
-    'mingliangwuliu': u'明亮物流',
-    'vancl': u'凡客配送',
-    'huaqikuaiyun': u'华企快运',
-    'city100': u'城市100',
-    'sxhongmajia': u'红马甲物流',
-    'suijiawuliu': u'穗佳物流',
-    'feibaokuaidi': u'飞豹快递',
-    'chuanxiwuliu': u'传喜物流',
-    'jietekuaidi': u'捷特快递',
-    'longlangkuaidi': u'隆浪快递',
-    'emsen': u'EMS-英文',
-    'zhongtianwanyun': u'中天万运',
-    'hkpost': u'香港邮政',
-    'bangsongwuliu': u'邦送物流',
-    'guotongkuaidi': u'国通快递',
-    'auspost': u'澳大利亚邮政',
-    'canpost': u'加拿大邮政-英文版',
-    'canpostfr': u'加拿大邮政-法文版',
-    'upsen': u'UPS-全球件',
-    'tnten': u'TNT-全球件',
-    'dhlen': u'DHL-全球件',
-    'shunfengen': u'顺丰-美国件',
-    'huiqiangkuaidi': u'汇强快递',
-    'xiyoutekuaidi': u'希优特',
-    'haoshengwuliu': u'昊盛物流',
-    'shangcheng': u'尚橙物流',
-    'yilingsuyun': u'亿领速运',
-    'dayangwuliu': u'大洋物流',
-    'didasuyun': u'递达速运',
-    'yitongda': u'易通达',
-    'youbijia': u'邮必佳',
-    'yishunhang': u'亿顺航',
-    'feihukuaidi': u'飞狐快递',
-    'xiaoxiangchenbao': u'潇湘晨报',
-    'balunzhi': u'巴伦支',
-    'aramex': u'Aramex',
-    'minshengkuaidi': u'闽盛快递',
-    'syjiahuier': u'佳惠尔',
-    'minbangsudi': u'民邦速递',
-    'shanghaikuaitong': u'上海快通',
-    'xiaohongmao': u'北青小红帽',
-    'gsm': u'GSM',
-    'annengwuliu': u'安能物流',
-    'kcs': u'KCS',
-    'citylink': u'City-Link',
-    'diantongkuaidi': u'店通快递',
-    'fanyukuaidi': u'凡宇快递',
-    'pingandatengfei': u'平安达腾飞',
-    'guangdongtonglu': u'广东通路',
-    'zhongruisudi': u'中睿速递',
-    'kuaidawuliu': u'快达物流',
-    'jiajikuaidi': u'佳吉快递',
-    'adp': u'ADP国际快递',
-    'fardarww': u'颿达国际快递',
-    'fandaguoji': u'颿达国际快递(英文)',
-    'shlindao': u'林道国际快递',
-    'sinoex': u'中外运速递(中文)',
-    'zhongwaiyun': u'中外运速递',
-    'dechuangwuliu': u'深圳德创物流',
-    'ldxpres': u'林道国际快递(英文)',
-    'ruidianyouzheng': u'瑞典邮政包裹小包',
-    'postenab': u'Posten AB',
-    'nuoyaao': u'偌亚奥国际快递',
-    'chengjisudi': u'城际速递',
-    'xianglongyuntong': u'祥龙运通物流',
-    'pinsuxinda': u'品速心达快递',
-    'yuxinwuli': u'宇鑫物流',
-}
-
+DEFAULT_COOKIE = '2fd846a8d62b4116cc09b70b1fc69aa9_1567757074089;56da4ea5511e22b41c6d1815cfc82cba'
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36',
-    'Referer': 'http://www.kuaidi100.com',
+    'Referer': 'https://www.guoguo-app.com/queryExpress.htm',
     'Sec-Fetch-Mode': 'cros',
-    'Sec-Fetch-Site': 'same-origin',
-    'X-Requested-With': 'XMLHttpRequest',
-    'Accept': 'application/json, text/javascript, */*; q=0.01',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+    'Accept': 'application/json',
+    'Origin': 'https://www.guoguo-app.com',
+    'Content-type': 'application/x-www-form-urlencoded',
     'DNT': '1'
 }
 
-def get_csrf_token():
-    HOMEPAGE = 'http://www.kuaidi100.com/'
+def fetch_last_cookie():
+    return wf.stored_data('cookie')
 
-    try:
-        rt = web.get(HOMEPAGE, headers=HEADERS)
-        rt.raise_for_status()
-        # wf.logger.debug(rt.headers.get('set-cookie'))
-        cookies = {}
-        regex = r"csrftoken=([A-Za-z0-9\-]+);|WWWID=([A-Z0-9]+);"
-        matches = re.finditer(regex, rt.headers.get('set-cookie'))
-        for matchNum, match in enumerate(matches, start=1):
-            key, value = match.group().split('=')[:2]
-            cookies[key] = value[:-1]
+def store_last_cookie(cookie):
+    wf.store_data('cookie', cookie)
 
-    except Exception as e:
-        wf.logger.debug('[D]: exception: unable to get csrf token {}'.format(e))
-        return {}
+def getToken(cookie):
+    return cookie.split('_')[0]
 
-    return cookies
+def getSign(token, now, appKey, mailData):
+    return hashlib.md5("{}&{}&{}&{}".format(token, now, appKey, mailData)).hexdigest()
 
+def do_request(package_no, cookie):
 
-def get_package_company(package_no):
+    now = '{}'.format(int(time.time() * 1000))
+    token = getToken(cookie)
+    appKey = '12574478'
+    data = '{{"mailNo":"{}","cpCode":""}}'.format(package_no)
+    sign = getSign(token, now, appKey, data)
 
-    COPMPANY_QUERY_URL = 'http://www.kuaidi100.com/autonumber/autoComNum'
+    # wf.logger.debug('[D] QUERY: \nnow:{}\ntoken:{}\ndata:{}\nsign:{}\n'.format(now,token,data,sign))
 
-    try:
-        rt = web.get(
-            COPMPANY_QUERY_URL,
-            params=dict(resultv2=1, text=package_no),
-            headers=HEADERS,
-            cookies={'WWWID': global_cookies['WWWID']}
-        )
-        rt.raise_for_status()
-
-        # 去掉前缀和多余空格，最长的即是最优解
-        result = rt.json()
-        result = result['auto']
-
-        return [result[0]['comCode'], COMPANY_CODE[result[0]['comCode']]]
-    except Exception as e:
-        wf.logger.debug('[D]: exception: {}'.format(e))
-        result = [u'Unknow', u'未知快递公司']
-
-    return result
-
-def query_package_info(package_no):
-
-    ret = {}
-
-    com_code = get_package_company(package_no)
-    # wf.logger.debug('[D]:Final company: ' + ''.join(com_code))
-
-    if com_code[0] is u'Unknow':
-        ret['status'] = False
-        ret['company'] = com_code[1] + u"或单号不可用"
-        return ret
-
-
-    API = 'http://www.kuaidi100.com/query'
+    API = 'https://h5api.m.taobao.com/h5/mtop.cnwireless.cnlogisticdetailservice.wapquerylogisticpackagebymailno/1.0/'
     param = {
-        "type": com_code[0],
-        "postid": package_no,
-        "temp": (time.time() / 100000000000) + (random.randint(0,9) / 10),
-        "phone": None
+        "jsv": "2.4.2",
+        "appKey": appKey,
+        "t": now,
+        "sign": sign,
+        "api": "mtop.cnwireless.CNLogisticDetailService.wapqueryLogisticPackageByMailNo",
+        "AntiCreep": "true",
+        "v": "1.0",
+        "timeout": "5000",
+        "type": "originaljson",
+        "dataType": "json",
+        "c": cookie,
+        "data": data,
     }
 
     try:
-        rt = web.get(API, params=param, headers=HEADERS, cookies=global_cookies)
+        rt = web.get(API, params=param, headers=HEADERS, cookies={})
         rt.raise_for_status()
         response = rt.json()
         # wf.logger.debug('[D]: query response: ' + ''.join(json.dumps(response)))
+        return response
+    except Exception as e:
+        # wf.logger.debug('[D]: Exception! query response: {}'.format(e))
 
-        if response:
-            ret['data'] = response["data"]
+
+def query_package_info(package_no):
+    ret = {}
+
+    try:
+        response = do_request(
+            package_no,
+            cookie=fetch_last_cookie() or DEFAULT_COOKIE
+        )
+
+        # wf.logger.debug('[D]: last_cookie_1: {}'.format(fetch_last_cookie()))
+
+        if 'c' in response.keys():
+            store_last_cookie(response['c'])
+            # wf.logger.debug('[D]: last_cookie_2: {}'.format(fetch_last_cookie()))
+            response = do_request(package_no, cookie=response['c'])
+
+        # wf.logger.debug('[D]: last_cookie_3: {}'.format(fetch_last_cookie()))
+
+        if response['ret'][0] == u"SUCCESS::调用成功":
+            data = response['data']
             ret['status'] = True
-            ret['package_no'] = response["nu"]
-            ret['company'] = com_code[1]
-            ret['state'] = response['state']
-            ret['condition'] = response['condition']
-            pass
-        else:
+            ret['package_no'] = data['mailNo']
+            ret['company'] = data['partnerName']
+            ret['companyIcon'] = data['partnerIconUrl']
+            ret['companyNumber'] = data['partnerContactPhone']
+            ret['transitHistory'] = data['transitList']
+            ret['transitStatus'] = data['packageStatus']['status']
+            ret['transitDep'] = data['packageStatus']['departureName']
+            ret['transitDst'] = data['packageStatus']['destinationName']
+        elif response['ret'][0] == "RGV587_ERROR::SM":
             ret['status'] = False
-            ret['company'] = com_code[1] + u"或单号不可用"
-            ret['state'] = response['state']
-            ret['condition'] = response['condition']
-            return
+            ret['package_no'] = package_no
+            ret['company'] = u'临时封禁'
 
-    except Exception:
+    except Exception as e:
+        # wf.logger.debug('[D]: exception: {}'.format(e))
         ret['status'] = False
-        ret['company'] = com_code[1] + u"或单号不可用"
-        ret['state'] = response['state']
-        ret['condition'] = response['condition']
+        ret['package_no'] = package_no
+        ret['company'] = u'未知'
         pass
 
     return ret
 
-def main(wf):
-
-    truck = u'\U0001F69A'
+def get_icon_status(item):
     truck_icon = 'assets/truck.png'
     up_icon = 'assets/up.png'
-    success = u'\U00002705'
+    success_icon = 'assets/success.png'
+    package_icon = 'assets/icon.png'
+
+    if 'sectionName' in item.keys(): # 是否存在 sectionName
+        if item["sectionName"] == 'CONSIGN': # 等待揽收
+            icon = package_icon
+            deliver_status = u'等待揽收'
+        if item["sectionName"] == 'TRANSPORT': # 运输中
+            icon = truck_icon
+            if item['action'] == 'TMS_ACCEPT': # 已揽收
+                deliver_status = u'已揽收'
+            elif item['action'] == 'TMS_STATION_IN': # 运输入站
+                deliver_status = u'已到达'
+            elif item['action'] == 'TMS_STATION_OUT': # 运输出站
+                deliver_status = u'已离开'
+            elif item['action'] == 'TMS_SENT_CITY': # 已抵达
+                deliver_status = u'已抵达'
+            elif item['action'] == 'TMS_DELIVERING': # 派送中
+                deliver_status = u'派送中'
+            else: # 未知情况
+                deliver_status = u'运输中'
+        if item["sectionName"] == 'SIGN': # 已签收
+           icon=success_icon
+           if item['action'] == 'TMS_SIGN': # 已签收
+                deliver_status = u'已签收'
+    else: # 无sectionName，当作普通信息对待
+        if item['action'] == 'CREATE': # 下单
+            icon = up_icon
+            deliver_status = u'等待揽收'
+        else:
+            icon = up_icon
+            deliver_status = ''
+
+    return icon, deliver_status
+
+def main(wf):
+
+    truck_icon = 'assets/truck.png'
+    up_icon = 'assets/up.png'
     success_icon = 'assets/success.png'
     package_icon = 'assets/icon.png'
 
@@ -318,45 +162,72 @@ def main(wf):
     param = (wf.args[0] if len(wf.args) else '').strip()
     if param:
         resu = query_package_info(param)
-        # wf.logger.debug('[D]:Final Output: {}'.format(json.dumps(resu)))
+        wf.logger.debug('[D]:Final Output: {}'.format(json.dumps(resu)))
 
-        if resu['state'] == '3' or resu['condition'] == 'F00':
+        if resu['status'] == False:
             # 查无结果
-            wf.add_item(title=resu["company"] + " " + resu["package_no"],
-                        subtitle=u"查无结果（可能是接口调用过多，请稍后再试）",
-                        arg="",
-                        valid=True,
-                        icon=package_icon)
+            wf.add_item(
+                title=u"查无结果，请稍后再试",
+                subtitle=u"单号 {}, 错误信息: {}".format(resu['package_no'], resu['company']),
+                arg="",
+                valid=True,
+                icon=package_icon
+            )
         else:
-            final = resu["company"] + " " + resu["package_no"] + u" 物流信息详情\n"
-            for item in reversed(resu['data']):
-                final += item["time"] + " " + item["context"] + " " + item["location"] or "" + "\n"
-            wf.add_item(title=resu["company"] + " " + resu["package_no"],
-                        subtitle=u"按 return(↵) 复制物流信息到剪贴板",
-                        arg=final,
-                        valid=True,
-                        icon=package_icon)
-            for item in resu['data']:
-                if u'签收' in item["context"]:
-                    wf.add_item(title=success + " " + item["context"] + " " + item["location"],
-                                subtitle=item["time"],
-                                arg=item["context"] + " " + item["location"] or "" ,
-                                valid=True,
-                                icon=success_icon)
-                else:
-                    wf.add_item(title=truck + " " + item["context"] + " " + item["location"],
-                                subtitle=item["time"],
-                                arg=item["context"] + " " + item["location"] or "" ,
-                                valid=True,
-                                icon=truck_icon)
-    else:
-        title = u"快递助手"
-        subtitle = u"无需输入公司，直接输入单号即可"
-        wf.add_item(title=title,
-                    subtitle=subtitle,
-                    arg="",
+            final = u'{company} {no} 物流信息详情\n从 {dep} 发往 {dst}，当前状态: {pkg_status}\n'.format(
+                company=resu["company"],
+                no=resu["package_no"],
+                dep=resu['transitDep'],
+                dst=resu['transitDst'],
+                pkg_status=resu['transitStatus'],
+            )
+            for item in resu['transitHistory']:
+                icon, deliver_status = get_icon_status(item)
+                final += u'[{deliver_status}] {time} {message}\n'.format(
+                        deliver_status=deliver_status,
+                        time=item['time'],
+                        message=item['message']
+                    )
+
+            wf.add_item(
+                title=u'{company} {no}  {dep} 发往 {dst}'.format(
+                    company=resu['company'],
+                    no=resu['package_no'],
+                    dep=resu['transitDep'],
+                    dst=resu['transitDst'],
+                ),
+                subtitle=u"按 return(↵) 复制物流信息到剪贴板",
+                arg=final,
+                valid=True,
+                icon=package_icon
+            )
+
+            for item in reversed(resu['transitHistory']):
+                icon, deliver_status = get_icon_status(item)
+
+                wf.add_item(
+                    title=u'{deliver_status} {message}'.format(
+                        deliver_status=deliver_status,
+                        message=item['message']
+                    ),
+                    subtitle=item['time'],
+                    arg=u'{deliver_status} {time} {message}'.format(
+                        deliver_status=deliver_status,
+                        time=item['time'],
+                        message=item['message']
+                    ),
                     valid=True,
-                    icon=package_icon)
+                    icon=icon
+                )
+    else:
+        wf.add_item(
+            title=u"快递助手",
+            subtitle=u"无需输入公司，直接输入单号即可",
+            arg="",
+            valid=True,
+            icon=package_icon
+        )
+
     wf.send_feedback()
 
 
@@ -367,12 +238,12 @@ if __name__ == u"__main__":
         'frequency': 7
     })
 
-    global_cookies = get_csrf_token()
-
     if wf.update_available:
-        wf.add_item(title=u'发现新版本',
-                    subtitle=u'选中本条目开始更新',
-                    autocomplete='workflow:update',
-                    icon=ICON_INFO)
+        wf.add_item(
+            title=u'发现新版本',
+            subtitle=u'选中本条目开始更新',
+            autocomplete='workflow:update',
+            icon=ICON_INFO
+        )
 
     sys.exit(wf.run(main))
